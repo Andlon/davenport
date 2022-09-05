@@ -1,7 +1,37 @@
 //! Ergonomic thread-local work spaces for intermediate data.
 //!
 //! `davenport` is a microcrate with a simple API for working with thread-local data, like
-//! buffers for intermediate data. Let's consider a motivating example.
+//! buffers for intermediate data. Here's a brief example of the `davenport` API:
+//!
+//! ```rust
+//! use davenport::{define_thread_local_workspace, with_thread_local_workspace};
+//!
+//! #[derive(Default)]
+//! pub struct MyWorkspace {
+//!     index_buffer: Vec<usize>
+//! }
+//!
+//! define_thread_local_workspace!(WORKSPACE);
+//!
+//! fn median(indices: &[usize]) -> Option<usize> {
+//!     with_thread_local_workspace(&WORKSPACE, |workspace: &mut MyWorkspace| {
+//!         // Re-use buffer from previous call to this function
+//!         let buffer = &mut workspace.index_buffer;
+//!         buffer.clear();
+//!         buffer.copy_from_slice(&indices);
+//!         buffer.sort_unstable();
+//!         // This is incorrect if the list has an even number of elements,
+//!         // we allow this to avoid complicating the example
+//!         buffer.get(indices.len() / 2).copied()
+//!     })
+//! }
+//! ```
+//! Thread local storage should be used with care. In the above example, if `indices` is large,
+//! then a large buffer may be allocated and not freed for the duration of the program. Since
+//! stand-alone functions that use thread local storage rarely have enough information to know
+//! whether the buffer should be kept alive or not, this may easily lead to unnecessary
+//! and redundant memory use.
+//!
 //!
 //! ## Motivating example
 //!
