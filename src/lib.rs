@@ -30,7 +30,7 @@
 //! whether the buffer should be kept alive or not, this may easily lead to unnecessary
 //! and redundant memory use.
 //!
-//! Try to find other solutions before reaching for thread-local data!//!
+//! Try to find other solutions before reaching for thread-local data!
 //!
 //! ## Motivating example
 //!
