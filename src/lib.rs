@@ -154,9 +154,9 @@ pub struct Workspace {
 
 impl Workspace {
     pub fn get_or_insert_with<W, F>(&mut self, create: F) -> &mut W
-        where
-            W: 'static,
-            F: FnOnce() -> W,
+    where
+        W: 'static,
+        F: FnOnce() -> W,
     {
         // Note: We treat the Vec as a stack, so we search from the end of the vector.
         let existing_ws_idx = self.workspaces.iter().rposition(|ws| ws.is::<W>());
@@ -183,8 +183,8 @@ impl Workspace {
     }
 
     pub fn get_or_default<W>(&mut self) -> &mut W
-        where
-            W: 'static + Default,
+    where
+        W: 'static + Default,
     {
         self.get_or_insert_with(Default::default)
     }
