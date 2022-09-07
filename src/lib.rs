@@ -220,7 +220,9 @@ pub fn with_thread_local_workspace<W: 'static + Default, T>(
     f: impl FnOnce(&mut W) -> T,
 ) -> T {
     workspace.with(|refcell_ws| {
-        let mut type_erased_workspace = refcell_ws.borrow_mut();
+        let mut type_erased_workspace = refcell_ws.try_borrow_mut()
+            .expect("Internal error: Can not recursively use the same workspace variable. \
+                     See discussion on limitations in davenport's crate-level documentation.");
         let workspace = type_erased_workspace.get_or_default();
         f(workspace)
     })
