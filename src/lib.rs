@@ -1,4 +1,4 @@
-//! Ergonomic thread-local work spaces for intermediate data.
+//! Ergonomic thread-local workspaces for intermediate data.
 //!
 //! `davenport` is a microcrate with a simple API for working with thread-local data, like
 //! buffers for intermediate data. Here's a brief example of the `davenport` API:
