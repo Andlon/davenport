@@ -13,15 +13,13 @@
 //!
 //! define_thread_local_workspace!(WORKSPACE);
 //!
-//! fn median(indices: &[usize]) -> Option<usize> {
+//! fn median_floor(indices: &[usize]) -> Option<usize> {
 //!     with_thread_local_workspace(&WORKSPACE, |workspace: &mut MyWorkspace| {
 //!         // Re-use buffer from previous call to this function
 //!         let buffer = &mut workspace.index_buffer;
 //!         buffer.clear();
 //!         buffer.copy_from_slice(&indices);
 //!         buffer.sort_unstable();
-//!         // This is incorrect if the list has an even number of elements,
-//!         // we allow this to avoid complicating the example
 //!         buffer.get(indices.len() / 2).copied()
 //!     })
 //! }
@@ -32,6 +30,7 @@
 //! whether the buffer should be kept alive or not, this may easily lead to unnecessary
 //! and redundant memory use.
 //!
+//! Try to find other solutions before reaching for thread-local data!//!
 //!
 //! ## Motivating example
 //!
@@ -136,6 +135,16 @@
 //! is constructed, which we ask for a mutable reference to `Vec<T>`. If the buffer does not
 //! yet exist, it is default-constructed. Otherwise we obtain a previously-used instance.
 //!
+//! # Limitations
+//!
+//! Currently, trying to access the same workspace variable (`WORKSPACE` in the above examples)
+//! recursively with [`with_thread_local_workspace`] will panic, as it relies on
+//! mutably borrowing through [`RefCell`](`std::cell::RefCell`).
+//! While this restriction could technically
+//! be lifted at the cost of increased complexity in `davenport`, it rarely arises in practice
+//! when using sufficiently local workspaces, as opposed to sharing a single workspace variable
+//! across entire crates.
+//!
 
 use std::any::Any;
 use std::cell::RefCell;
@@ -146,7 +155,10 @@ use std::thread::LocalKey;
 /// The workspace is intended to hold intermediate data used as workspace in computations.
 /// It is optimized particularly for the case where the same type is accessed many times in a row.
 ///
-/// TODO: Tests
+/// Usually you do not need to use this type directly. Instead, use
+/// [`define_thread_local_workspace`] in conjunction with
+/// [`with_thread_local_workspace`] as described in the
+/// [crate-level documentation](`crate`).
 #[derive(Debug, Default)]
 pub struct Workspace {
     workspaces: Vec<Box<dyn Any>>,
@@ -196,31 +208,13 @@ impl Workspace {
 ///
 /// Note that the typed workspace must have a [`Default`] implementation.
 ///
-/// # Examples
+/// See the [crate-level documentation](`crate`) for typical usage examples.
 ///
-/// ```rust
-/// # use std::cell::RefCell;
-/// use davenport::{define_thread_local_workspace, with_thread_local_workspace, Workspace};
+/// ## Panics
 ///
-/// define_thread_local_workspace!(WORKSPACE);
-///
-/// // Workspace must implement Default
-/// #[derive(Default)]
-/// struct MyWorkspace {
-///     buffer: Vec<usize>
-/// }
-///
-/// fn main() {
-///     let sum: usize = with_thread_local_workspace(&WORKSPACE, |ws: &mut MyWorkspace| {
-///         // This is of course completely nonsense, we just show how you can easily use a thread-local workspace
-///         // and produce a result which is returned.
-///         ws.buffer.clear();
-///         ws.buffer.extend_from_slice(&[1, 4, 3]);
-///         ws.buffer.iter().sum()
-///     });
-///     println!("Sum = {}", sum);
-/// }
-/// ```
+/// Panics if used recursively with the same workspace variable, as it relies on
+/// mutably borrowing through [`RefCell`](`std::cell::RefCell`). See the crate-level documentation for
+/// a discussion of this limitation.
 pub fn with_thread_local_workspace<W: 'static + Default, T>(
     workspace: &'static LocalKey<RefCell<Workspace>>,
     f: impl FnOnce(&mut W) -> T,
@@ -234,27 +228,7 @@ pub fn with_thread_local_workspace<W: 'static + Default, T>(
 
 /// Helper macro for easily defining thread-local workspaces.
 ///
-/// # Example
-/// ```
-/// use davenport::{define_thread_local_workspace, with_thread_local_workspace};
-///
-/// define_thread_local_workspace!(WORKSPACE);
-///
-/// // Workspace must implement Default
-/// #[derive(Default)]
-/// struct MyWorkspace {
-///     buffer: Vec<usize>
-/// }
-///
-/// fn foo() {
-///     with_thread_local_workspace(&WORKSPACE, |workspace: &mut MyWorkspace| {
-///         workspace.buffer.clear();
-///         workspace.buffer.copy_from_slice(&[1, 2, 3]);
-///         // Perform some computations that need intermediate storage
-///     })
-/// }
-/// ```
-///
+/// See the [crate-level documentation](`crate`) for usage instructions.
 #[macro_export]
 macro_rules! define_thread_local_workspace {
     ($variable_name:ident) => {
