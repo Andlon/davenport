@@ -165,6 +165,10 @@ pub struct Workspace {
 }
 
 impl Workspace {
+    /// Attempts to insert the given object into the workspace.
+    ///
+    /// If the insertion was successful, a reference to the object is returned. Otherwise,
+    /// `None` is returned.
     #[must_use]
     pub fn try_insert<W: 'static>(&mut self, w: W) -> Option<&mut W> {
         if self.find_index_of::<W>().is_none() {
