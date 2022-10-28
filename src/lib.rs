@@ -165,13 +165,36 @@ pub struct Workspace {
 }
 
 impl Workspace {
+    #[must_use]
+    pub fn try_insert<W: 'static>(&mut self, w: W) -> Option<&mut W> {
+        if self.find_index_of::<W>().is_none() {
+            self.workspaces.push(Box::from(w));
+            self.workspaces.last_mut().unwrap().downcast_mut()
+        } else {
+            None
+        }
+    }
+
+    pub fn try_get<W: 'static>(&self) -> Option<&W> {
+        self.workspaces
+            .iter()
+            .rev()
+            .find_map(|ws| ws.downcast_ref())
+    }
+
+    pub fn try_get_mut<W: 'static>(&mut self) -> Option<&mut W> {
+        self.workspaces
+            .iter_mut()
+            .rev()
+            .find_map(|ws| ws.downcast_mut())
+    }
+
     pub fn get_or_insert_with<W, F>(&mut self, create: F) -> &mut W
     where
         W: 'static,
         F: FnOnce() -> W,
     {
-        // Note: We treat the Vec as a stack, so we search from the end of the vector.
-        let existing_ws_idx = self.workspaces.iter().rposition(|ws| ws.is::<W>());
+        let existing_ws_idx = self.find_index_of::<W>();
         let idx = match existing_ws_idx {
             Some(idx) => idx,
             None => {
@@ -199,6 +222,11 @@ impl Workspace {
         W: 'static + Default,
     {
         self.get_or_insert_with(Default::default)
+    }
+
+    fn find_index_of<W: 'static>(&self) -> Option<usize> {
+        // Note: We treat the Vec as a stack, so we search from the end of the vector.
+        self.workspaces.iter().rposition(|ws| ws.is::<W>())
     }
 }
 
