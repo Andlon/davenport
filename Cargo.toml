@@ -1,6 +1,6 @@
 [package]
 name = "davenport"
-version = "0.1.0"
+version = "0.1.1"
 description = "Ergonomic thread-local workspaces for intermediate data"
 edition = "2021"
 license = "MIT OR Apache-2.0"
